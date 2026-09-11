@@ -2,27 +2,26 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useBusiness } from "@/context/BusinessContext";
+import { useTrack1Store } from "@/state/track1Store";
 
 export default function HomePage() {
   const router = useRouter();
-  const { hasCompletedOnboarding, isLoaded } = useBusiness();
+  const { hasCompletedProfile } = useTrack1Store();
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (hasCompletedOnboarding) {
+    if (hasCompletedProfile) {
       router.replace("/blueprint");
     } else {
-      router.replace("/onboarding");
+      router.replace("/discovery");
     }
-  }, [hasCompletedOnboarding, isLoaded, router]);
+  }, [hasCompletedProfile, router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-surface">
       <div className="flex flex-col items-center gap-space-md">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-surface-container-high border-t-primary"></div>
         <span className="font-label-md text-label-md text-on-surface-variant">
-          Initializing UdyogFlow...
+          Initializing UdyogFlow Track-1 Control Layer...
         </span>
       </div>
     </div>
