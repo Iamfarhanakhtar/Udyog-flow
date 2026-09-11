@@ -308,7 +308,15 @@ export async function validateLicenseDependencies(
     }
   }
 
-  // 3. Cycle detection: Adding edge (licenseIdOrSlug -> prerequisiteIdOrSlug)
+  // 3. Duplicate pair check: Reject if the dependency pair already exists
+  if (adj.get(licenseIdOrSlug)?.has(prerequisiteIdOrSlug)) {
+    return {
+      valid: false,
+      error: `Duplicate license dependency pair rejected: Dependency from "${licenseIdOrSlug}" to "${prerequisiteIdOrSlug}" already exists.`,
+    };
+  }
+
+  // 4. Cycle detection: Adding edge (licenseIdOrSlug -> prerequisiteIdOrSlug)
   // would create a cycle if prerequisiteIdOrSlug can already reach licenseIdOrSlug.
   const visited = new Set<string>();
   const canReach = (current: string, target: string): boolean => {

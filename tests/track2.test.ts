@@ -10,7 +10,7 @@ if (!process.env.DATABASE_URL && fs.existsSync('.env')) {
   }
 }
 
-import { getAllNiches, getNicheBySlug } from '../services/nicheService';
+import { getAllNiches, getNicheBySlug, createMicroNiche } from '../services/nicheService';
 import {
   getBlueprintByNicheSlug,
   validateLicenseDependencies,
@@ -237,6 +237,42 @@ async function runTrack2Tests() {
       ]
     );
     assert.strictEqual(validCheck.valid, true);
+  });
+
+  // 12. Regression Test: Duplicate MicroNiche slug rejection
+  await testAsync('Regression: Duplicate MicroNiche slug creation is rejected', async () => {
+    await assert.rejects(
+      async () => {
+        await createMicroNiche({
+          slug: 'cloud-kitchen', // already existing slug
+          name: 'Duplicate Cloud Kitchen',
+          macroCategory: 'Food Processing & Hospitality',
+          description: 'Testing duplicate slug uniqueness violation.',
+        });
+      },
+      {
+        name: 'Error',
+        message: /Duplicate micro-niche slug rejected.*"cloud-kitchen" already exists/,
+      }
+    );
+  });
+
+  // 13. Regression Test: Duplicate LicenseDependency pair rejection
+  await testAsync('Regression: Duplicate LicenseDependency pair is rejected', async () => {
+    // Attempting to add an edge that already exists in the graph:
+    // municipal-trade-license -> fssai-state-license
+    const duplicateCheck = await validateLicenseDependencies(
+      'municipal-trade-license',
+      'fssai-state-license',
+      [
+        { licenseSlug: 'municipal-trade-license', prerequisiteSlug: 'fssai-state-license' },
+      ]
+    );
+    assert.strictEqual(duplicateCheck.valid, false, 'Duplicate dependency pair must be rejected');
+    assert.ok(
+      duplicateCheck.error?.includes('Duplicate license dependency pair rejected'),
+      'Error message must indicate duplicate pair rejection'
+    );
   });
 
   console.log(`\n========================================`);

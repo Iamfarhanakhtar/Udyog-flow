@@ -109,3 +109,51 @@ export async function getNicheBySlug(slug: string): Promise<{ data: MicroNicheIt
     source: 'seed_fallback',
   };
 }
+
+/**
+ * Creates a micro-niche, enforcing uniqueness of the slug.
+ * Rejects duplicates with a clear validation error.
+ */
+export async function createMicroNiche(data: {
+  slug: string;
+  name: string;
+  macroCategory: string;
+  description: string;
+  iconName?: string | null;
+  estimatedDays?: number | null;
+  initialCapex?: string | null;
+}): Promise<MicroNicheItem> {
+  const existing = await getNicheBySlug(data.slug);
+  if (existing.data) {
+    throw new Error(`Duplicate micro-niche slug rejected: "${data.slug}" already exists.`);
+  }
+
+  try {
+    const created = await prisma.microNiche.create({
+      data: {
+        slug: data.slug,
+        name: data.name,
+        macroCategory: data.macroCategory,
+        description: data.description,
+        iconName: data.iconName,
+        estimatedDays: data.estimatedDays,
+        initialCapex: data.initialCapex,
+      },
+    });
+
+    return {
+      id: created.id,
+      slug: created.slug,
+      name: created.name,
+      macroCategory: created.macroCategory,
+      description: created.description,
+      iconName: created.iconName,
+      estimatedDays: created.estimatedDays,
+      initialCapex: created.initialCapex,
+      isActive: created.isActive,
+    };
+  } catch (err) {
+    throw new Error(`Duplicate micro-niche slug rejected: "${data.slug}" already exists.`);
+  }
+}
+
