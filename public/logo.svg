@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" fill="none">
+  <rect width="48" height="48" x="8" y="8" rx="12" fill="#2563EB"/>
+  <path d="M22 22h12a8 8 0 0 1 8 8v0a8 8 0 0 1-8 8H22V22z" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M27 38l12-16" stroke="#60A5FA" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="39" cy="22" r="3" fill="#10B981"/>
+  <text x="68" y="38" font-family="Plus Jakarta Sans, Inter, sans-serif" font-weight="800" font-size="22" fill="#0F172A" letter-spacing="-0.5">UDYOG<tspan fill="#2563EB">FLOW</tspan></text>
+  <text x="69" y="50" font-family="Plus Jakarta Sans, Inter, sans-serif" font-weight="600" font-size="9" fill="#64748B" letter-spacing="1.5">COMPLIANCE OS</text>
+</svg>
