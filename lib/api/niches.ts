@@ -240,20 +240,109 @@ export const MOCK_CLOUD_KITCHEN_BLUEPRINT: NicheBlueprint = {
   ],
 };
 
+const isLiveApiEnabled = () => {
+  return (
+    process.env.NEXT_PUBLIC_API_MODE === "live" ||
+    (typeof window !== "undefined" && window.location.hostname === "localhost")
+  );
+};
+
 /**
  * Service Abstraction for Micro-Niches
- * Corresponds to future:
+ * Connects to Track-2 live API:
  * GET /api/niches
- * GET /api/niches/cloud-kitchen/blueprint
+ * With clear development warning and resilient fallback on network/backend failure.
  */
 export async function getNiches(): Promise<MicroNiche[]> {
-  // Simulates network latency
-  await new Promise((res) => setTimeout(res, 100));
+  if (isLiveApiEnabled() && typeof window !== "undefined") {
+    try {
+      const res = await fetch("/api/niches", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        // Map backend MicroNiche items while preserving Track-1 frontend properties
+        const mapped = json.data.map((item: {
+          slug: string;
+          name: string;
+          macroCategory: string;
+          description: string;
+          iconName?: string | null;
+          estimatedDays?: number | null;
+          initialCapex?: string | null;
+        }) => {
+          const existing = MOCK_MICRO_NICHES.find((m) => m.id === item.slug);
+          return {
+            id: item.slug,
+            title: item.name,
+            category: item.macroCategory,
+            description: item.description,
+            iconName: existing?.iconName || "chef-hat",
+            estimatedSetupDays: item.estimatedDays || existing?.estimatedSetupDays || 30,
+            initialCapexRange: item.initialCapex || existing?.initialCapexRange || "₹5L – ₹15L",
+            primaryActionLabel: existing?.primaryActionLabel || "Explore Blueprint",
+            isFullySupported: item.slug === "cloud-kitchen",
+            highlights: existing?.highlights || ["Statutory Operating Permit", "Municipal Clearances"],
+          };
+        });
+        return mapped;
+      }
+    } catch (err) {
+      console.warn(
+        "[UdyogFlow Integration Warning] Live API /api/niches fetch failed. Falling back to local mock data. Reason:",
+        (err as Error).message
+      );
+    }
+  }
+
+  // Simulates standard latency when fallback or mock mode is active
+  await new Promise((res) => setTimeout(res, 60));
   return MOCK_MICRO_NICHES;
 }
 
+/**
+ * Service Abstraction for Niche Blueprint
+ * Connects to Track-2 live API:
+ * GET /api/niches/[slug]/blueprint
+ */
 export async function getNicheBlueprint(nicheId: string): Promise<NicheBlueprint | null> {
-  await new Promise((res) => setTimeout(res, 150));
+  if (isLiveApiEnabled() && typeof window !== "undefined") {
+    try {
+      const res = await fetch(`/api/niches/${encodeURIComponent(nicheId)}/blueprint`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      const json = await res.json();
+      if (json.success && json.data) {
+        // Return full Track-1 blueprint with updated live overview and schemes from backend
+        return {
+          ...MOCK_CLOUD_KITCHEN_BLUEPRINT,
+          nicheId: json.data.niche.slug,
+          nicheTitle: json.data.blueprint.title,
+          macroCategory: json.data.niche.macroCategory,
+          overview: json.data.blueprint.overview,
+          recommendedNextStep: json.data.blueprint.recommendedNextStep,
+          governmentSchemes: json.data.schemes.map((s: { name: string; benefit: string; agency: string }, idx: number) => ({
+            id: `scheme-${idx + 1}`,
+            name: s.name,
+            benefit: s.benefit,
+            agency: s.agency,
+          })),
+        };
+      }
+    } catch (err) {
+      console.warn(
+        `[UdyogFlow Integration Warning] Live API /api/niches/${nicheId}/blueprint fetch failed. Falling back to local mock. Reason:`,
+        (err as Error).message
+      );
+    }
+  }
+
+  await new Promise((res) => setTimeout(res, 80));
   if (nicheId === "cloud-kitchen") {
     return MOCK_CLOUD_KITCHEN_BLUEPRINT;
   }

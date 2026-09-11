@@ -1,0 +1,152 @@
+// Prisma schema for UdyogFlow - Track 2 (Database & Relational Blueprint Engine)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserBusiness {
+  id          String   @id @default(uuid())
+  businessId  String   @unique
+  userId      String?
+  legalName   String
+  macroNiche  String
+  microNiche  String
+  state       String
+  city        String
+  pincode     String
+  entityType  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([microNiche])
+}
+
+model MicroNiche {
+  id            String               @id @default(uuid())
+  slug          String               @unique
+  name          String
+  macroCategory String
+  description   String
+  iconName      String?
+  estimatedDays Int?
+  initialCapex  String?
+  isActive      Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  blueprint           NicheBlueprint?
+  licenseRequirements LicenseRequirement[]
+  governmentSchemes   GovernmentScheme[]
+
+  @@index([slug])
+}
+
+model NicheBlueprint {
+  id                  String     @id @default(uuid())
+  microNicheId        String     @unique
+  microNiche          MicroNiche @relation(fields: [microNicheId], references: [id], onDelete: Cascade)
+  title               String
+  overview            String
+  setupSummary        String
+  recommendedNextStep String
+  isActive            Boolean    @default(true)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([microNicheId])
+}
+
+model LicenseRequirement {
+  id               String   @id @default(uuid())
+  microNicheId     String
+  microNiche       MicroNiche @relation(fields: [microNicheId], references: [id], onDelete: Cascade)
+  licenseName      String
+  slug             String
+  issuingAuthority String
+  description      String
+  status           String   @default("MANDATORY")
+  priority         Int      @default(1)
+  sla              String?
+  sourceAuthority  String
+  sourceUrl        String
+  lastVerified     String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Self-referential Many-to-Many through LicenseDependency
+  prerequisites        LicenseDependency[]          @relation("LicenseToPrerequisites")
+  dependentLicenses    LicenseDependency[]          @relation("LicenseToDependents")
+  documentRequirements LicenseDocumentRequirement[]
+
+  @@unique([slug, microNicheId])
+  @@index([microNicheId])
+}
+
+model LicenseDependency {
+  id                   String             @id @default(uuid())
+  licenseId            String
+  license              LicenseRequirement @relation("LicenseToPrerequisites", fields: [licenseId], references: [id], onDelete: Cascade)
+  prerequisiteLicenseId String
+  prerequisiteLicense  LicenseRequirement @relation("LicenseToDependents", fields: [prerequisiteLicenseId], references: [id], onDelete: Cascade)
+  createdAt            DateTime           @default(now())
+
+  @@unique([licenseId, prerequisiteLicenseId])
+  @@index([licenseId])
+  @@index([prerequisiteLicenseId])
+}
+
+model DocumentRequirement {
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  name         String
+  description  String
+  category     String   // IDENTITY, PREMISES, UTILITY, OPERATIONAL, TAX
+  source       String
+  sourceUrl    String
+  lastVerified String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  licenseDocuments LicenseDocumentRequirement[]
+
+  @@index([slug])
+  @@index([category])
+}
+
+model LicenseDocumentRequirement {
+  id                    String              @id @default(uuid())
+  licenseId             String
+  license               LicenseRequirement  @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  documentRequirementId String
+  documentRequirement   DocumentRequirement @relation(fields: [documentRequirementId], references: [id], onDelete: Cascade)
+  required              Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+
+  @@unique([licenseId, documentRequirementId])
+  @@index([licenseId])
+  @@index([documentRequirementId])
+}
+
+model GovernmentScheme {
+  id              String     @id @default(uuid())
+  microNicheId    String
+  microNiche      MicroNiche @relation(fields: [microNicheId], references: [id], onDelete: Cascade)
+  name            String
+  description     String
+  benefit         String
+  agency          String
+  status          String     // "Potentially relevant", "Check eligibility"
+  sourceAuthority String
+  sourceUrl       String
+  lastVerified    String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([microNicheId])
+}
